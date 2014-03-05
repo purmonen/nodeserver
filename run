@@ -1,0 +1,2 @@
+mongodb/bin/mongod &
+node server.js
