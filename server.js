@@ -8,6 +8,15 @@ var db = mongojs.connect(url, ['users', 'posts']);
 var cors = require('cors');
 var passwordHash = require('password-hash');
 app.use(cors());
+
+app.use(function(req, res, next) {
+    if(req.url.substr(-1) == '/' && req.url.length > 1) {
+       res.redirect(301, req.url.slice(0, -1));
+   } else {
+       next();
+   }
+});
+
 app.listen(3000);
 
 var auth = express.basicAuth(function(user, password, callback) {
@@ -20,20 +29,20 @@ var auth = express.basicAuth(function(user, password, callback) {
     });
 });
 
-app.get('/users/', function(req, res) {
+app.get('/users', function(req, res) {
     db.users.find({}, function(err, result) {
         return res.json(result);
     });
 });
 
 // Create new user 
-app.post('/users/', function(req, res) {
+app.post('/users', function(req, res) {
     db.users.find({user: req.body.user}, function(err, result) {
         if (!result.length) {
             var hash = passwordHash.generate(req.body.password);
             db.users.insert({
                 user: req.body.user,
-                password: hash 
+                password: hash
             });
             return res.json(true);
         } else {
@@ -42,51 +51,36 @@ app.post('/users/', function(req, res) {
     });
 });
 
-app.delete('/users/', function(req, res) {
+app.delete('/users', function(req, res) {
     db.users.remove();
     return res.json(true);
 });
 
-app.delete('/users/', auth, function(req, res) {
+app.delete('/users', auth, function(req, res) {
     db.users.remove({user: req.user});
     db.posts.remove({user: req.user});
     return res.json(true);
 });
 
 // Get all items from user
-app.get('/posts/:user/', function(req, res) {
-    db.posts.find({user: req.params.user}, function(err, result) {
-        return res.json(result.slice(0,100));
+app.get('/:user/posts/:id', function(req, res) {
+    db.posts.find({user: req.params.user, id: req.params.id}, function(err, result) {
+        return res.json(result[0].content);
     });
 });
 
-app.delete('/posts/', auth, function(req, res) {
-    db.posts.remove();
-    return res.json(true);
-});
-
-app.post('/posts/', auth, function(req, res) {
+app.post('/:user/posts/:id', auth, function(req, res) {
     var post = {
-        user: req.user,
-        content: req.body.content,
+        id: req.params.id,
+        user: req.params.user,
+        content: req.body,
         timestamp: Date.now()
     }
-    db.posts.insert(post);
-    return res.json(post);
+    db.posts.update({id: post.id}, post, {upsert: true});
+    return res.json({});
 });
 
-app.delete('/posts/:id/', auth, function(req, res) {
-    db.posts.remove({_id: ObjectId(req.params.id)});
+app.delete('/:user/posts/:id', function(req, res) {
+    db.posts.remove({user: req.params.user, id: req.params.id});
     return res.json(true);
-});
-
-app.post('/posts/:id/', auth, function(req, res) {
-    var post = {
-        _id: ObjectId(req.params.id),
-        user: req.user,
-        content: req.body.content,
-        timestamp: Date.now()
-    }
-    db.posts.update({_id: ObjectId(req.params.id)}, post);
-    return res.json(post);
 });
