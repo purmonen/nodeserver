@@ -10,7 +10,7 @@ var passwordHash = require('password-hash');
 app.use(cors());
 
 app.use(function(req, res, next) {
-    if(req.url.substr(-1) == '/' && req.url.length > 1) {
+    if(req.url.substr(-1) === '/' && req.url.length > 1) {
        res.redirect(301, req.url.slice(0, -1));
    } else {
        next();
@@ -29,14 +29,14 @@ var auth = express.basicAuth(function(user, password, callback) {
     });
 });
 
-app.get('/users', function(req, res) {
+app.get('/', function(req, res) {
     db.users.find({}, function(err, result) {
         return res.json(result);
     });
 });
 
 // Create new user 
-app.post('/users', function(req, res) {
+app.post('/', function(req, res) {
     db.users.find({user: req.body.user}, function(err, result) {
         if (!result.length) {
             var hash = passwordHash.generate(req.body.password);
@@ -51,25 +51,33 @@ app.post('/users', function(req, res) {
     });
 });
 
-app.delete('/users', function(req, res) {
-    db.users.remove();
-    return res.json(true);
-});
-
-app.delete('/users', auth, function(req, res) {
+app.delete('/:user', auth, function(req, res) {
+    if (req.params.user === req.user) {
+        return res.json(false);
+    }
     db.users.remove({user: req.user});
     db.posts.remove({user: req.user});
     return res.json(true);
 });
 
 // Get all items from user
-app.get('/:user/posts/:id', function(req, res) {
+app.get('/:user', function(req, res) {
+    db.posts.find({user: req.params.user}, function(err, result) {
+        return res.json(result);
+    });
+});
+
+// Get all items from user
+app.get('/:user/:id', function(req, res) {
     db.posts.find({user: req.params.user, id: req.params.id}, function(err, result) {
         return res.json(result[0].content);
     });
 });
 
-app.post('/:user/posts/:id', auth, function(req, res) {
+app.post('/:user/:id', auth, function(req, res) {
+    if (req.params.user !== req.user) {
+        return res.json(false);
+    }
     var post = {
         id: req.params.id,
         user: req.params.user,
@@ -80,7 +88,7 @@ app.post('/:user/posts/:id', auth, function(req, res) {
     return res.json({});
 });
 
-app.delete('/:user/posts/:id', function(req, res) {
+app.delete('/:user/:id', function(req, res) {
     db.posts.remove({user: req.params.user, id: req.params.id});
     return res.json(true);
 });

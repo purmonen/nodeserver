@@ -1,6 +1,6 @@
 {
     "name": "todo",
-    "description": "To do lists",
+    "description": "",
     "version": "0.0.1",
     "private": true,
     "dependencies": {
