@@ -9,6 +9,7 @@ var cors = require('cors');
 var passwordHash = require('password-hash');
 app.use(cors());
 
+// Remove trailing slash from url 
 app.use(function(req, res, next) {
     if(req.url.substr(-1) === '/' && req.url.length > 1) {
        res.redirect(301, req.url.slice(0, -1));
@@ -18,6 +19,60 @@ app.use(function(req, res, next) {
 });
 
 app.listen(3000);
+
+var User = {};
+
+User.get = function(user, success, error) {
+    db.users.find({user: user}, function(err, result) {
+        if (err || !result.length) error();
+        else success(result[0]);
+    });
+}
+
+User.create = function(user, password, success, error) {
+    db.users.find({user: user}, function(err, result) {
+        if (err || result.length) {
+            error();
+        } else {
+            var newUser = {
+                user: user,
+                password: passwordHash.generate(password),
+                timestamp: Date.now()
+            };
+            db.users.insert(newUser);
+            success(newUser);
+        }
+    });
+};
+
+User.delete = function(user) {
+    db.users.find({user: user}, function(err, result) {
+        if (err || !result.length) error();
+        else {
+            db.users.remove({user: user});
+            db.posts.remove({user: user});
+        }
+    });
+}
+
+var Post = {};
+
+Post.get = function(user, id, success, error) {
+    db.posts.find({user: user, id: id}, function(err, result) {
+        if (err || !result.length) error();
+        else success(result[0]);
+    });
+}
+
+Post.create = function(post, success, error) {
+    db.posts.update({id: post.id}, post, {upsert: true});
+    return;
+}
+
+Post.delete = function(user, id) {
+    db.posts.remove({user: user, id: id});
+    return;
+}
 
 var auth = express.basicAuth(function(user, password, callback) {
     db.users.find({user: user}, function(err, result) {
@@ -35,28 +90,19 @@ app.get('/', function(req, res) {
     });
 });
 
-// Create new user 
 app.post('/', function(req, res) {
-    db.users.find({user: req.body.user}, function(err, result) {
-        if (!result.length) {
-            var hash = passwordHash.generate(req.body.password);
-            db.users.insert({
-                user: req.body.user,
-                password: hash
-            });
-            return res.json(true);
-        } else {
-            return res.json(false);
-        }
-    });
+    User.create(req.body.user, req.body.password, function() {
+        return res.json(true);
+    }, function() {
+        return res.json(false);
+    })
 });
 
 app.delete('/:user', auth, function(req, res) {
     if (req.params.user === req.user) {
         return res.json(false);
     }
-    db.users.remove({user: req.user});
-    db.posts.remove({user: req.user});
+    User.delete(req.user);
     return res.json(true);
 });
 
@@ -69,8 +115,10 @@ app.get('/:user', function(req, res) {
 
 // Get all items from user
 app.get('/:user/:id', function(req, res) {
-    db.posts.find({user: req.params.user, id: req.params.id}, function(err, result) {
-        return res.json(result[0].content);
+    Post.get(req.params.user, req.params.id, function(post) {
+        return res.json(post.content);
+    }, function() {
+        return res.send(404, 'Error!');
     });
 });
 
@@ -78,17 +126,20 @@ app.post('/:user/:id', auth, function(req, res) {
     if (req.params.user !== req.user) {
         return res.json(false);
     }
-    var post = {
+    console.log(req.body);
+    Post.create({
         id: req.params.id,
         user: req.params.user,
         content: req.body,
         timestamp: Date.now()
-    }
-    db.posts.update({id: post.id}, post, {upsert: true});
+    });
     return res.json({});
 });
 
 app.delete('/:user/:id', function(req, res) {
-    db.posts.remove({user: req.params.user, id: req.params.id});
+    if (req.params.user !== req.user) {
+        return res.send(400, 'Idiot');
+    }
+    Post.delete({user: req.params.user, id: req.params.id});
     return res.json(true);
 });
