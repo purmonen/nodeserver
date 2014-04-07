@@ -1,12 +1,12 @@
 {
-    "name": "myRESTAPI",
+    "name": "myapp",
     "description": "Server for storing content via REST API",
     "version": "0.0.1",
     "private": true,
     "dependencies": {
         "express": "3.4.x",
         "mongojs": "0.10.x",
-        "passwordHash": "1.2.x",
+        "password-hash": "1.2.x",
         "cors": "2.2.x"
     }
 }

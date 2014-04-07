@@ -32,9 +32,9 @@ var auth = express.basicAuth(function(user, password, callback) {
 
 // Create user
 app.post('/', function(req, res) {
-    User.create(req.body.user, req.body.password, function(err, user) {
+    User.create(req.body.user, req.body.password, function(err) {
         if (err) res.send(403);
-        else res.json(user);
+        else res.send(200);
     });
 });
 

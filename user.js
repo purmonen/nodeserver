@@ -1,6 +1,6 @@
 var settings = require('./settings.js');
 var mongojs = require('mongojs');
-var db = mongojs(settings.dbUrl, ['users']);
+var db = mongojs(settings.dbUrl, ['users', 'posts']);
 var passwordHash = require('password-hash');
 
 var User = {};

@@ -1,0 +1,11 @@
+// Create user
+curl http://localhost:3000/ --data "user=apa&password=apa"
+
+// Add post named banana
+curl http://apa:apa@localhost:3000/apa/banana --data "banana=bananas"
+
+// Get post
+curl http://localhost:3000/apa/banana
+
+// Delete user
+curl http://apa:apa@localhost:3000/apa -X DELETE
